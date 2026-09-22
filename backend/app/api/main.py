@@ -1,7 +1,8 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from app.db.session import get_db
+from app.api.routes.document_router import router as document_router
 
 
 app = FastAPI()
@@ -17,3 +18,5 @@ def get_db_check(db: Session = Depends(get_db)):
     if result != 1:
         raise HTTPException(status_code=500, detail="something went wrong")
     return {"database": "connected"} 
+
+app.include_router(document_router)
