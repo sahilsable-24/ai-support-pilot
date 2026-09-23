@@ -3,7 +3,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from app.db.session import get_db
 from app.api.routes.document_router import router as document_router
+import logging
 
+logging.basicConfig(level=logging.INFO)
 
 app = FastAPI()
 
