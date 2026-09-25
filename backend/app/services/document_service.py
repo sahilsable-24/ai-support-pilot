@@ -4,7 +4,7 @@ from fastapi import UploadFile
 from sqlalchemy.orm import Session
 from app.db.models import Document
 import logging
-from app.ingestion.loaders import load_markdown,load_txt
+from app.ingestion.loaders import load_markdown,load_txt, load_pdf
 
 
 logger = logging.getLogger(__name__)
@@ -16,7 +16,8 @@ STORAGE_DIR.mkdir(parents=True,exist_ok=True)
 
 LOADER = {
     ".txt": load_txt,
-    ".md": load_markdown
+    ".md": load_markdown,
+    ".pdf": load_pdf
 }
 
 class InvalidDocumentError(Exception):
@@ -77,8 +78,9 @@ def process_document(db: Session, document_id: uuid.UUID) -> Document:
         raise InvalidDocumentError(f"No loader available for {extension}")
 
     try:
-        text = loader(file_path)
-        logger.info(f"Extracted {len(text)} characters from {document.title}")
+        pages = loader(file_path)
+        total_chars = sum(len(text) for _,text in pages)
+        logger.info(f"Extracted {len(pages)} pages, {total_chars} characters from {document.title}")
         document.status = "ready"
     except Exception as e:
         logger.error(f"Failed to process the document {document_id}: {e}")
