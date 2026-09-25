@@ -6,6 +6,7 @@ from app.db.models import Document, DocumentChunk
 import logging
 from app.ingestion.loaders import load_markdown,load_txt, load_pdf
 from app.ingestion.chunking import chunk_text
+from app.embeddings.embedder import embed_text, get_model
 
 
 logger = logging.getLogger(__name__)
@@ -15,7 +16,7 @@ STORAGE_DIR = Path("storage/documents")
 
 STORAGE_DIR.mkdir(parents=True,exist_ok=True)
 
-LOADER = {
+LOADERS = {
     ".txt": load_txt,
     ".md": load_markdown,
     ".pdf": load_pdf
@@ -70,7 +71,7 @@ def process_document(db: Session, document_id: uuid.UUID) -> Document:
     file_path = STORAGE_DIR / document.source
     extension = file_path.suffix.lower()
 
-    loader = LOADER.get(extension)
+    loader = LOADERS.get(extension)
 
     if loader is None:
         document.status = "failed"
@@ -82,14 +83,22 @@ def process_document(db: Session, document_id: uuid.UUID) -> Document:
         pages = loader(file_path)
         chunks = chunk_text(pages)
 
+        if not chunks:
+            raise ValueError(f"No content could be extracted from {document.title}")
+
+        contents_list = [chunk["content"] for chunk in chunks]
+        model = get_model()
+        vectors = model.encode(contents_list).tolist()
+
         db.query(DocumentChunk).filter(DocumentChunk.document_id == document_id).delete()
 
-        for chunk in chunks:
+        for chunk, vector in zip(chunks, vectors):
             db.add(DocumentChunk(
                 document_id=document_id,
                 page=chunk["page"],
                 chunk_index=chunk["chunk_index"],
-                content=chunk["content"]
+                content=chunk["content"],
+                embedding= vector
             ))
         logger.info(f"Created {len(chunks)} chunks for {document.title}")
         document.status = "ready"
