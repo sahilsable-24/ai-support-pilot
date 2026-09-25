@@ -2,9 +2,10 @@ import uuid
 from pathlib import Path
 from fastapi import UploadFile
 from sqlalchemy.orm import Session
-from app.db.models import Document
+from app.db.models import Document, DocumentChunk
 import logging
 from app.ingestion.loaders import load_markdown,load_txt, load_pdf
+from app.ingestion.chunking import chunk_text
 
 
 logger = logging.getLogger(__name__)
@@ -79,8 +80,18 @@ def process_document(db: Session, document_id: uuid.UUID) -> Document:
 
     try:
         pages = loader(file_path)
-        total_chars = sum(len(text) for _,text in pages)
-        logger.info(f"Extracted {len(pages)} pages, {total_chars} characters from {document.title}")
+        chunks = chunk_text(pages)
+
+        db.query(DocumentChunk).filter(DocumentChunk.document_id == document_id).delete()
+
+        for chunk in chunks:
+            db.add(DocumentChunk(
+                document_id=document_id,
+                page=chunk["page"],
+                chunk_index=chunk["chunk_index"],
+                content=chunk["content"]
+            ))
+        logger.info(f"Created {len(chunks)} chunks for {document.title}")
         document.status = "ready"
     except Exception as e:
         logger.error(f"Failed to process the document {document_id}: {e}")
