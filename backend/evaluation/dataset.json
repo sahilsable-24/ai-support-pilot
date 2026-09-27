@@ -1,0 +1,42 @@
+[
+  {
+    "question": "Can I get my money back?",
+    "expected_document_title": "sample_support_docs.pdf"
+  },
+  {
+    "question": "How long do I have to request a refund?",
+    "expected_document_title": "sample_support_docs.pdf"
+  },
+  {
+    "question": "I forgot my password and I'm locked out of my account",
+    "expected_document_title": "sample_support_docs.pdf"
+  },
+  {
+    "question": "How do I unlock a customer's account after too many failed logins?",
+    "expected_document_title": "sample_support_docs.pdf"
+  },
+  {
+    "question": "How do I upgrade my subscription plan?",
+    "expected_document_title": "sample_support_docs.pdf"
+  },
+  {
+    "question": "Will I lose access to features if I downgrade?",
+    "expected_document_title": "sample_support_docs.pdf"
+  },
+  {
+    "question": "How do I delete my account permanently?",
+    "expected_document_title": "sample_support_docs.pdf"
+  },
+  {
+    "question": "Can I download a copy of my data before closing my account?",
+    "expected_document_title": "sample_support_docs.pdf"
+  },
+  {
+    "question": "When will my order ship?",
+    "expected_document_title": "sample_support_docs.pdf"
+  },
+  {
+    "question": "What is the weather like today?",
+    "expected_document_title": null
+  }
+]
