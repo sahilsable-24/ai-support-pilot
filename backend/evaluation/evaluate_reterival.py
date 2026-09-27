@@ -24,6 +24,9 @@ def evaluate():
 
     hits = 0
     total = len(dataset)
+    total_precision = 0.0
+    total_reciprocal_rank = 0.0
+    scored_count = 0
 
     for item in dataset:
         question = item['question']
@@ -39,10 +42,24 @@ def evaluate():
             continue
 
         expected_id = get_document_id_by_title(db,expected_title)
-        hit = expected_id is not None and str(expected_id) in retrieved_doc_ids
+        expected_id_str = str(expected_id) if expected_id else None
+        hit = expected_id_str is not None and expected_id_str in retrieved_doc_ids
+
+        #Precision@K
+        relevant_count = sum(1 for doc_id in retrieved_doc_ids if doc_id == expected_id_str)
+        precision = relevant_count / TOP_K
+
+        #MRR
+        first_relevant_rank = None
+        for rank,doc_id in enumerate(retrieved_doc_ids, start=1):
+            if doc_id == expected_id_str:
+                first_relevant_rank = rank
+                break
+
+        reciprocal_rank = 1 / first_relevant_rank if first_relevant_rank else 0
 
         status = "HIT " if hit else "MISS"
-        print(f"[{status}] '{question}'")
+        print(f"[{status}] '{question}'   (precision={precision:.2f}, rr={reciprocal_rank:.2f})")
 
         if results:
             print(f" top result: {results[0].content[:80]}...")
@@ -50,11 +67,17 @@ def evaluate():
         if hit:
             hits +=1
 
-    scored_total = total - sum(1 for i in dataset if i["expected_document_title"] is None)
+        total_precision += precision
+        total_reciprocal_rank += reciprocal_rank
+        scored_count += 1
 
-    recall = hits / scored_total if scored_total else 0
+    recall = hits / scored_count if scored_count else 0
+    avg_precision = total_precision / scored_count if scored_count else 0
+    mrr = total_reciprocal_rank / scored_count if scored_count else 0
 
-    print(f"\nRecall@{TOP_K}: {hits}/{scored_total} ({recall * 100:.1f}%)")
+    print(f"\nRecall@{TOP_K}: {hits}/{scored_count} ({recall * 100:.1f}%)")
+    print(f"Precision@{TOP_K}: {avg_precision:.2f}")
+    print(f"MRR: {mrr:.2f}")
 
     db.close()
 
