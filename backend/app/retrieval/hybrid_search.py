@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from app.db.models import DocumentChunk
 from app.retrieval.vector_search import search_with_scores
 from app.retrieval.keyword_search import bm25_search_with_scores
+from app.retrieval.reranker import rerank
 
 
 def normalize_scores(scores: list[float]) -> list[float]:
@@ -54,3 +55,18 @@ def hybrid_search(
     combined_scores.sort(key=lambda pair: pair[1], reverse=True)
 
     return [chunk for chunk, _ in combined_scores[:top_k]]
+
+
+def hybrid_then_rerank(
+    db: Session,
+    query:str,
+    top_k:int = 5,
+    alpha: float = 0.7,
+    candidate_pool_size: int = 20,
+) -> list[DocumentChunk]:
+
+    candidates = hybrid_search(
+        db,query,top_k=candidate_pool_size, alpha=alpha, candidate_pool_size=candidate_pool_size
+    )
+
+    return rerank(query, candidates, top_k=top_k)

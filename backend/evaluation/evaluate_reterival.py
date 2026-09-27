@@ -8,7 +8,7 @@ from app.db.session import SessionLocal
 from app.db.models import Document
 from app.retrieval.vector_search import search as vector_search
 from app.retrieval.keyword_search import bm25_search
-from app.retrieval.hybrid_search import hybrid_search
+from app.retrieval.hybrid_search import hybrid_search, hybrid_then_rerank
 
 TOP_K = 5
 
@@ -83,7 +83,8 @@ def main():
 
     evaluate(db, dataset, vector_search, "Vector Search")
     evaluate(db, dataset, bm25_search, "BM25 Search")
-    evaluate(db, dataset, hybrid_search, "Hybrid Search (alpha=0.7)")
+    evaluate(db, dataset, lambda db, q, top_k: hybrid_search(db, q, top_k, alpha=0.7), "Hybrid Search (alpha=0.7)")
+    evaluate(db, dataset, hybrid_then_rerank, "Hybrid + Rerank")
 
     db.close()
 
