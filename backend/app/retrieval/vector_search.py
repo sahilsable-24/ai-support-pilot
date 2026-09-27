@@ -48,3 +48,32 @@ def search(db:Session, query: str, top_k: int = 5) -> list[DocumentChunk]:
     chunks_by_id = {chunk.id:chunk for chunk in chunks}
 
     return [chunks_by_id[cid] for cid in result_ids if cid in chunks_by_id]
+
+    
+
+def search_with_scores(db: Session, query: str, top_k: int = 20) -> list[tuple[DocumentChunk, float]]:
+    index, chunk_ids = build_index(db)
+
+    model = get_model()
+    query_vector = model.encode([query], normalize_embeddings=True)
+    query_vector = np.array(query_vector, dtype="float32")
+
+    scores, indices = index.search(query_vector, top_k)
+
+    result_pairs = [
+        (chunk_ids[i], float(score))
+        for i, score in zip(indices[0], scores[0])
+        if i != -1
+    ]
+
+    result_ids = [chunk_id for chunk_id, _ in result_pairs]
+    chunks = db.scalars(
+        select(DocumentChunk).where(DocumentChunk.id.in_(result_ids))
+    ).all()
+    chunks_by_id = {chunk.id: chunk for chunk in chunks}
+
+    return [
+        (chunks_by_id[chunk_id], score)
+        for chunk_id, score in result_pairs
+        if chunk_id in chunks_by_id
+    ]
