@@ -27,10 +27,14 @@ def main():
             continue
 
         print(f"\nANSWER:\n{result['answer']}")
-        print("\nEvidence given to the model:")
-        for i, chunk in enumerate(result["chunks"], start=1):
-            preview = chunk.content[:70].replace("\n", " ")
-            print(f"  [{i}] page {chunk.page}: {preview}...")
+        print("\nCITATIONS:")
+        if result["citations"]:
+            for c in result["citations"]:
+                print(f"  [{c['id']}] {c['document_title']}, page {c['page']}")
+        else:
+            print("  (none)")
+        if result["invalid_citation_ids"]:
+            print(f"  ! invalid ids cited by the model: {result['invalid_citation_ids']}")
 
         t = result["timings"]
         print(

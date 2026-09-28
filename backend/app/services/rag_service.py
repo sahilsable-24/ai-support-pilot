@@ -5,6 +5,9 @@ from app.db.models import Document
 from app.generation.prompts import SYSTEM_PROMPT,build_context,build_user_prompt
 from app.generation.llm_client import generate
 from app.retrieval.hybrid_search import hybrid_then_rerank
+import logging
+from app.generation.citations import build_citations
+logger = logging.getLogger(__name__)
 
 
 def answer_question(db:Session, question:str, top_k:int=5) -> dict:
@@ -21,11 +24,16 @@ def answer_question(db:Session, question:str, top_k:int=5) -> dict:
 
     generation_start = time.perf_counter()
     answer = generate(prompt, system=SYSTEM_PROMPT)
+    citations, invalid_ids = build_citations(answer,chunks,titles)
+    if invalid_ids:
+        logger.warning(f"Model cited ids that were not in the context: {invalid_ids}")
     generation_done = time.perf_counter()
 
     return {
         "answer": answer,
         "chunks": chunks,
+        "citations": citations,
+        "invalid_citation_ids": invalid_ids,
         "timings": {
             "retrieval": reterival_done - start,
             "generation": generation_done - generation_start
