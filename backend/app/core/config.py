@@ -6,5 +6,6 @@ class Settings(BaseSettings):
     database_url: str
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "qwen2.5:7b"
+    evidence_threshold: float = -9.5
 
 settings = Settings()

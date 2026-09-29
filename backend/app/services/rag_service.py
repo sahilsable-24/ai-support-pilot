@@ -4,38 +4,62 @@ from sqlalchemy.orm import Session
 from app.db.models import Document
 from app.generation.prompts import SYSTEM_PROMPT,build_context,build_user_prompt
 from app.generation.llm_client import generate
-from app.retrieval.hybrid_search import hybrid_then_rerank
+from app.retrieval.hybrid_search import hybrid_then_rerank, hybrid_then_rerank_with_scores
 import logging
 from app.generation.citations import build_citations
+from app.core.config import settings
+from app.generation.evidence import has_sufficient_evidence
 logger = logging.getLogger(__name__)
 
+NO_EVIDENCE_MESSAGE = (
+    "I couldn't find enough information in the knowledge base to answer this. "
+    "Recommended action: escalate to the relevant team."
+)
 
-def answer_question(db:Session, question:str, top_k:int=5) -> dict:
+
+def answer_question(db: Session, question: str, top_k: int = 5) -> dict:
     start = time.perf_counter()
-    chunks = hybrid_then_rerank(db,question,top_k=top_k)
-    reterival_done = time.perf_counter()
+    scored_chunks = hybrid_then_rerank_with_scores(db, question, top_k=top_k)
+    retrieval_done = time.perf_counter()
+
+    if not has_sufficient_evidence(scored_chunks, settings.evidence_threshold):
+        return {
+            "answer": NO_EVIDENCE_MESSAGE,
+            "chunks": [],
+            "citations": [],
+            "invalid_citation_ids": [],
+            "insufficient_evidence": True,
+            "timings": {
+                "retrieval": retrieval_done - start,
+                "generation": 0.0,
+            },
+        }
+
+    chunks = [chunk for chunk, score in scored_chunks]
 
     doc_ids = {chunk.document_id for chunk in chunks}
     documents = db.scalars(select(Document).where(Document.id.in_(doc_ids))).all()
-    titles = {doc.id:doc.title for doc in documents}
+    titles = {doc.id: doc.title for doc in documents}
 
-    context = build_context(chunks,titles)
-    prompt = build_user_prompt(question,context)
+    context = build_context(chunks, titles)
+    prompt = build_user_prompt(question, context)
 
     generation_start = time.perf_counter()
     answer = generate(prompt, system=SYSTEM_PROMPT)
-    citations, invalid_ids = build_citations(answer,chunks,titles)
+    generation_done = time.perf_counter()
+
+    citations, invalid_ids = build_citations(answer, chunks, titles)
     if invalid_ids:
         logger.warning(f"Model cited ids that were not in the context: {invalid_ids}")
-    generation_done = time.perf_counter()
 
     return {
         "answer": answer,
         "chunks": chunks,
         "citations": citations,
         "invalid_citation_ids": invalid_ids,
+        "insufficient_evidence": False,
         "timings": {
-            "retrieval": reterival_done - start,
-            "generation": generation_done - generation_start
-        }
+            "retrieval": retrieval_done - start,
+            "generation": generation_done - generation_start,
+        },
     }

@@ -12,6 +12,9 @@ QUESTIONS = [
     "How do I unlock a customer's account after too many failed logins?",
     "What is the weather like today?",
     "Can I get a refund after 18 months?",
+    "Do you offer discounts for annual plans?",
+    "Is my data encrypted?",
+    "What is your phone number for billing support?"
 ]
 
 
@@ -26,15 +29,19 @@ def main():
             print(f"LLM error: {e}")
             continue
 
-        print(f"\nANSWER:\n{result['answer']}")
-        print("\nCITATIONS:")
-        if result["citations"]:
-            for c in result["citations"]:
-                print(f"  [{c['id']}] {c['document_title']}, page {c['page']}")
+        if result["insufficient_evidence"]:
+            print(f"\n[INSUFFICIENT EVIDENCE — no LLM call made]")
+            print(result["answer"])
         else:
-            print("  (none)")
-        if result["invalid_citation_ids"]:
-            print(f"  ! invalid ids cited by the model: {result['invalid_citation_ids']}")
+            print(f"\nANSWER:\n{result['answer']}")
+            print("\nCITATIONS:")
+            if result["citations"]:
+                for c in result["citations"]:
+                    print(f"  [{c['id']}] {c['document_title']}, page {c['page']}")
+            else:
+                print("  (none)")
+            if result["invalid_citation_ids"]:
+                print(f"  ! invalid ids cited by the model: {result['invalid_citation_ids']}")
 
         t = result["timings"]
         print(

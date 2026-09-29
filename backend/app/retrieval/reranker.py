@@ -10,7 +10,7 @@ def get_reranker():
     return _reranker
 
 
-def rerank(query:str, chunks:list[DocumentChunk], top_k: int=5) -> list[DocumentChunk]:
+def rerank_with_scores(query:str, chunks:list[DocumentChunk], top_k: int=5) -> list[tuple[DocumentChunk, float]]:
 
     if not chunks:
         return []
@@ -24,4 +24,10 @@ def rerank(query:str, chunks:list[DocumentChunk], top_k: int=5) -> list[Document
 
     scored_chunks.sort(key=lambda pair: pair[1], reverse=True)
 
-    return [chunk for chunk,score in scored_chunks[:top_k]]
+    return scored_chunks[:top_k]
+
+
+def rerank(query:str, chunks: list[DocumentChunk], top_k: int=5) -> list[DocumentChunk]:
+
+    scored = rerank_with_scores(query,chunks,top_k)
+    return [chunk for chunk,score in scored]

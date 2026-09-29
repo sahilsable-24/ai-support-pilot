@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from app.db.models import DocumentChunk
 from app.retrieval.vector_search import search_with_scores
 from app.retrieval.keyword_search import bm25_search_with_scores
-from app.retrieval.reranker import rerank
+from app.retrieval.reranker import rerank, rerank_with_scores
 
 
 def normalize_scores(scores: list[float]) -> list[float]:
@@ -70,3 +70,18 @@ def hybrid_then_rerank(
     )
 
     return rerank(query, candidates, top_k=top_k)
+
+
+def hybrid_then_rerank_with_scores(
+    db: Session,
+    query:str,
+    top_k: int = 5,
+    alpha: float = 0.7,
+    candidate_pool_size: int = 20
+) -> list[tuple[DocumentChunk, float]]:
+
+    candidates = hybrid_search(
+        db,query,top_k=candidate_pool_size, alpha=alpha, candidate_pool_size=candidate_pool_size
+    )
+
+    return rerank_with_scores(query, candidates, top_k=top_k)
