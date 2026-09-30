@@ -24,3 +24,20 @@ class DocumentChunk(Base):
     content: Mapped[str] = mapped_column(nullable=False)
     embedding: Mapped[list[float] | None] = mapped_column(JSON,nullable=True)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+class Conversation(Base):
+    __tablename__ = "conversations"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
+class Message(Base):
+    __tablename__ = "messages"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    conversation_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("conversations.id"), nullable=False)
+    role: Mapped[str] = mapped_column(nullable=False)
+    content: Mapped[str] = mapped_column(nullable=False)
+    citations: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())

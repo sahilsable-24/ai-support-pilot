@@ -9,6 +9,8 @@ import logging
 from app.generation.citations import build_citations
 from app.core.config import settings
 from app.generation.evidence import has_sufficient_evidence
+import uuid
+from app.services.conversation_service import create_conversation,add_message
 logger = logging.getLogger(__name__)
 
 NO_EVIDENCE_MESSAGE = (
@@ -17,12 +19,20 @@ NO_EVIDENCE_MESSAGE = (
 )
 
 
-def answer_question(db: Session, question: str, top_k: int = 5) -> dict:
+def answer_question(db: Session, question: str, conversation_id: uuid.UUID | None = None, top_k: int = 5) -> dict:
+
+    if conversation_id is None:
+        conversation = create_conversation(db)
+        conversation_id = conversation.id
+
+    add_message(db,conversation_id,"user",question)
+
     start = time.perf_counter()
     scored_chunks = hybrid_then_rerank_with_scores(db, question, top_k=top_k)
     retrieval_done = time.perf_counter()
 
     if not has_sufficient_evidence(scored_chunks, settings.evidence_threshold):
+        add_message(db,conversation_id,"assistant", NO_EVIDENCE_MESSAGE)
         return {
             "answer": NO_EVIDENCE_MESSAGE,
             "chunks": [],
@@ -52,8 +62,11 @@ def answer_question(db: Session, question: str, top_k: int = 5) -> dict:
     if invalid_ids:
         logger.warning(f"Model cited ids that were not in the context: {invalid_ids}")
 
+    add_message(db,conversation_id,"assistant",answer,citations=citations or None)
+
     return {
         "answer": answer,
+        "conversation_id": conversation_id,
         "chunks": chunks,
         "citations": citations,
         "invalid_citation_ids": invalid_ids,

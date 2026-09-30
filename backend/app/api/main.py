@@ -4,6 +4,7 @@ from sqlalchemy import text
 from app.db.session import get_db
 from app.api.routes.document_router import router as document_router
 from app.api.routes.search_router import router as search_router
+from app.api.routes.chat_router import router as chat_router
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -24,3 +25,4 @@ def get_db_check(db: Session = Depends(get_db)):
 
 app.include_router(document_router)
 app.include_router(search_router)
+app.include_router(chat_router)
