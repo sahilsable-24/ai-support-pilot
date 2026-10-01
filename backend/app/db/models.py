@@ -41,3 +41,13 @@ class Message(Base):
     content: Mapped[str] = mapped_column(nullable=False)
     citations: Mapped[list | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
+class Feedback(Base):
+    __tablename__ = "feedback"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    message_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("messages.id"), nullable=False)
+    rating: Mapped[str] = mapped_column(nullable=False)
+    reason: Mapped[str | None] = mapped_column(nullable=True)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())

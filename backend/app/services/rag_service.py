@@ -41,6 +41,7 @@ def answer_question(db: Session, question: str, conversation_id: uuid.UUID | Non
         add_message(db,conversation_id,"assistant", NO_EVIDENCE_MESSAGE)
         return {
             "answer": NO_EVIDENCE_MESSAGE,
+            "conversation_id": conversation_id,
             "chunks": [],
             "citations": [],
             "invalid_citation_ids": [],
