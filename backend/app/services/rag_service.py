@@ -10,7 +10,8 @@ from app.generation.citations import build_citations
 from app.core.config import settings
 from app.generation.evidence import has_sufficient_evidence
 import uuid
-from app.services.conversation_service import create_conversation,add_message
+from app.services.conversation_service import create_conversation,add_message, get_messages
+from app.generation.query_rewriting import rewrite_query
 logger = logging.getLogger(__name__)
 
 NO_EVIDENCE_MESSAGE = (
@@ -24,11 +25,16 @@ def answer_question(db: Session, question: str, conversation_id: uuid.UUID | Non
     if conversation_id is None:
         conversation = create_conversation(db)
         conversation_id = conversation.id
+        history = []
+    else:
+        history = get_messages(db,conversation_id)
+
+    retrieval_query = rewrite_query(history,question) if history else question
 
     add_message(db,conversation_id,"user",question)
 
     start = time.perf_counter()
-    scored_chunks = hybrid_then_rerank_with_scores(db, question, top_k=top_k)
+    scored_chunks = hybrid_then_rerank_with_scores(db, retrieval_query, top_k=top_k)
     retrieval_done = time.perf_counter()
 
     if not has_sufficient_evidence(scored_chunks, settings.evidence_threshold):
@@ -52,7 +58,7 @@ def answer_question(db: Session, question: str, conversation_id: uuid.UUID | Non
     titles = {doc.id: doc.title for doc in documents}
 
     context = build_context(chunks, titles)
-    prompt = build_user_prompt(question, context)
+    prompt = build_user_prompt(retrieval_query, context)
 
     generation_start = time.perf_counter()
     answer = generate(prompt, system=SYSTEM_PROMPT)
