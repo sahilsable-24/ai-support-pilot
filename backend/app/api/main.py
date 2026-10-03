@@ -8,10 +8,18 @@ from app.api.routes.chat_router import router as chat_router
 from app.api.routes.conversation_router import router as conversation_router
 from app.api.routes.feedback_router import router as feedback_router
 import logging
+from fastapi.middleware.cors import CORSMiddleware
 
 logging.basicConfig(level=logging.INFO)
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000","http://192.168.1.8:3000"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/health")
 def get_health():

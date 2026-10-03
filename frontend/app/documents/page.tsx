@@ -1,0 +1,141 @@
+"use client";
+
+import { useState, useEffect } from "react";
+
+type Document = {
+  id: string;
+  title: string;
+  source: string;
+  status: string;
+  created_at: string;
+};
+
+const API = "http://localhost:8000";
+
+export default function DocumentsPage() {
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function fetchDocuments() {
+    const res = await fetch(`${API}/documents`);
+    if (res.ok) setDocuments(await res.json());
+  }
+
+  useEffect(() => {
+    fetchDocuments();
+  }, []);
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    setError(null);
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch(`${API}/documents`, { method: "POST", body: formData });
+      if (!res.ok) {
+        const body = await res.json();
+        throw new Error(body.detail || "Upload failed");
+      }
+      const doc: Document = await res.json();
+
+      // trigger processing immediately after upload
+      await fetch(`${API}/documents/${doc.id}/process`, { method: "POST" });
+
+      await fetchDocuments();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col max-w-[1280px] mx-auto">
+      <header className="flex items-center justify-between px-10 py-5 border-b border-line">
+        <div className="font-serif-display font-semibold text-[22px] tracking-tight">
+          SupportPilot
+        </div>
+        <nav className="flex gap-7 text-sm">
+          <a href="/" className="text-meta">
+            Chat
+          </a>
+          <a href="/documents" className="text-ink border-b-2 border-steel pb-0.5">
+            Documents
+          </a>
+          <a href="#" className="text-meta">
+            Feedback
+          </a>
+        </nav>
+      </header>
+
+      <main className="flex-1 px-10 py-12 flex justify-center">
+        <div className="w-full max-w-[680px] flex flex-col gap-8">
+          <div>
+            <h1 className="font-serif-display text-2xl font-semibold mb-1">
+              Knowledge base
+            </h1>
+            <p className="text-sm text-meta">
+              Upload PDF, Markdown, or text files for SupportPilot to reference.
+            </p>
+          </div>
+
+          <label className="border border-line bg-white rounded-md px-6 py-10 flex flex-col items-center justify-center text-center cursor-pointer hover:border-steel transition-colors">
+            <span className="text-sm font-medium mb-1">
+              {uploading ? "Uploading…" : "Choose a file to upload"}
+            </span>
+            <span className="text-xs text-meta">.pdf, .md, .txt — up to 20MB</span>
+            <input
+              type="file"
+              accept=".pdf,.md,.txt"
+              onChange={handleUpload}
+              disabled={uploading}
+              className="hidden"
+            />
+          </label>
+
+          {error && (
+            <div className="text-sm text-clay border border-clay/30 bg-clay/10 rounded-md px-4 py-3">
+              {error}
+            </div>
+          )}
+
+          <div className="flex flex-col gap-2">
+            {documents.length === 0 && (
+              <p className="text-sm text-meta">No documents uploaded yet.</p>
+            )}
+            {documents.map((doc) => (
+              <div
+                key={doc.id}
+                className="flex items-center justify-between border-b border-line py-3 text-sm"
+              >
+                <span>{doc.title}</span>
+                <StatusBadge status={doc.status} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const styles: Record<string, string> = {
+    ready: "text-steel bg-steel/10",
+    pending: "text-meta bg-meta/10",
+    processing: "text-meta bg-meta/10",
+    failed: "text-clay bg-clay/10",
+  };
+  return (
+    <span className={`text-xs px-2 py-1 rounded ${styles[status] || styles.pending}`}>
+      {status}
+    </span>
+  );
+}

@@ -110,3 +110,17 @@ def process_document(db: Session, document_id: uuid.UUID) -> Document:
     db.refresh(document)
 
     return document
+
+def delete_document(db: Session, document_id: uuid.UUID) -> None:
+    document = db.get(Document, document_id)
+    if document is None:
+        raise DocumentNotFoundError(f"Document {document_id} not found")
+
+    db.query(DocumentChunk).filter(DocumentChunk.document_id == document_id).delete()
+
+    file_path = STORAGE_DIR / document.source
+    if file_path.exists():
+        file_path.unlink()
+
+    db.delete(document)
+    db.commit()

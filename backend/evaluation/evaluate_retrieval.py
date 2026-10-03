@@ -83,7 +83,7 @@ def main():
 
     evaluate(db, dataset, vector_search, "Vector Search")
     evaluate(db, dataset, bm25_search, "BM25 Search")
-    evaluate(db, dataset, lambda db, q, top_k: hybrid_search(db, q, top_k, alpha=0.7), "Hybrid Search (alpha=0.7)")
+    evaluate(db, dataset, lambda db, q, top_k: hybrid_search(db, q, top_k, alpha=0.7), "Hybrid (alpha=0.7)")
     evaluate(db, dataset, hybrid_then_rerank, "Hybrid + Rerank")
 
     db.close()

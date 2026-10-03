@@ -1,42 +1,25 @@
 [
-  {
-    "question": "Can I get my money back?",
-    "expected_document_title": "sample_support_docs.pdf"
-  },
-  {
-    "question": "How long do I have to request a refund?",
-    "expected_document_title": "sample_support_docs.pdf"
-  },
-  {
-    "question": "I forgot my password and I'm locked out of my account",
-    "expected_document_title": "sample_support_docs.pdf"
-  },
-  {
-    "question": "How do I unlock a customer's account after too many failed logins?",
-    "expected_document_title": "sample_support_docs.pdf"
-  },
-  {
-    "question": "How do I upgrade my subscription plan?",
-    "expected_document_title": "sample_support_docs.pdf"
-  },
-  {
-    "question": "Will I lose access to features if I downgrade?",
-    "expected_document_title": "sample_support_docs.pdf"
-  },
-  {
-    "question": "How do I delete my account permanently?",
-    "expected_document_title": "sample_support_docs.pdf"
-  },
-  {
-    "question": "Can I download a copy of my data before closing my account?",
-    "expected_document_title": "sample_support_docs.pdf"
-  },
-  {
-    "question": "When will my order ship?",
-    "expected_document_title": "sample_support_docs.pdf"
-  },
-  {
-    "question": "What is the weather like today?",
-    "expected_document_title": null
-  }
+  {"question": "Can I get my money back?", "expected_document_title": "sample_support_docs.pdf"},
+  {"question": "How long do I have to request a refund?", "expected_document_title": "sample_support_docs.pdf"},
+  {"question": "I forgot my password and I'm locked out of my account", "expected_document_title": "sample_support_docs.pdf"},
+  {"question": "How do I unlock a customer's account after too many failed logins?", "expected_document_title": "sample_support_docs.pdf"},
+  {"question": "How do I upgrade my subscription plan?", "expected_document_title": "sample_support_docs.pdf"},
+  {"question": "Will I lose access to features if I downgrade?", "expected_document_title": "sample_support_docs.pdf"},
+  {"question": "How do I delete my account permanently?", "expected_document_title": "sample_support_docs.pdf"},
+  {"question": "Can I download a copy of my data before closing my account?", "expected_document_title": "sample_support_docs.pdf"},
+  {"question": "When will my order ship?", "expected_document_title": "sample_support_docs.pdf"},
+  {"question": "What is the weather like today?", "expected_document_title": null},
+
+  {"question": "How many API requests can I make per day on the Pro plan?", "expected_document_title": "product_feature_guide.md"},
+  {"question": "Can a Viewer change billing settings?", "expected_document_title": "product_feature_guide.md"},
+  {"question": "What happens if a webhook delivery fails?", "expected_document_title": "product_feature_guide.md"},
+  {"question": "Do I need 2FA on my account?", "expected_document_title": "product_feature_guide.md"},
+  {"question": "What should I do if I lose access to my 2FA app?", "expected_document_title": "product_feature_guide.md"},
+  {"question": "Can I build a custom report on the free plan?", "expected_document_title": "product_feature_guide.md"},
+
+  {"question": "What laptop will I get on my first day?", "expected_document_title": "employee_onboarding_guide.md"},
+  {"question": "How long do I have to enroll in health insurance?", "expected_document_title": "employee_onboarding_guide.md"},
+
+  {"question": "Does upgrading my plan change my team permissions?", "expected_document_title": null},
+  {"question": "Can I get a refund if I'm unhappy with a webhook integration?", "expected_document_title": null}
 ]
