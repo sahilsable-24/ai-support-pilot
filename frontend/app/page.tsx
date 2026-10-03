@@ -17,7 +17,7 @@ type Message = {
   feedback?: "helpful" | "not_helpful" | null;
 };
 
-const API = "http://localhost:8000";
+const API = process.env.NEXT_PUBLIC_API_URL;
 
 export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
