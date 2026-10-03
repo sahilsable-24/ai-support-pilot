@@ -13,6 +13,7 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
     return ChatResponse(
         answer=result["answer"],
         conversation_id=result["conversation_id"],
+        message_id = result["message_id"],
         citations=result["citations"],
         insufficient_evidence=result["insufficient_evidence"],
     )

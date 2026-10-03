@@ -11,6 +11,7 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     answer: str
     conversation_id: uuid.UUID
+    message_id: uuid.UUID
     citations: list[dict]
     insufficient_evidence: bool
 

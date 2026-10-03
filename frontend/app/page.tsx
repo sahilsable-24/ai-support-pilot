@@ -13,6 +13,8 @@ type Message = {
   content: string;
   citations?: Citation[];
   insufficientEvidence?: boolean;
+  messageId?: string;
+  feedback?: "helpful" | "not_helpful" | null;
 };
 
 const API = "http://localhost:8000";
@@ -28,7 +30,7 @@ export default function Home() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const question = input.trim();
     if (!question || loading) return;
@@ -53,16 +55,37 @@ export default function Home() {
           content: data.answer,
           citations: data.citations,
           insufficientEvidence: data.insufficient_evidence,
+          messageId: data.message_id,
+          feedback: null,
         },
       ]);
     } catch {
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "Something went wrong reaching SupportPilot.", insufficientEvidence: true },
+        {
+          role: "assistant",
+          content: "Something went wrong reaching SupportPilot.",
+          insufficientEvidence: true,
+        },
       ]);
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleFeedback(index: number, rating: "helpful" | "not_helpful") {
+    const message = messages[index];
+    if (!message.messageId) return;
+
+    setMessages((prev) =>
+      prev.map((m, i) => (i === index ? { ...m, feedback: rating } : m))
+    );
+
+    await fetch(`${API}/feedback`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message_id: message.messageId, rating }),
+    });
   }
 
   return (
@@ -77,9 +100,6 @@ export default function Home() {
           </a>
           <a href="/documents" className="text-meta">
             Documents
-          </a>
-          <a href="#" className="text-meta">
-            Feedback
           </a>
         </nav>
       </header>
@@ -101,9 +121,16 @@ export default function Home() {
               {m.role === "user" ? (
                 <div className="text-[17px] leading-relaxed">{m.content}</div>
               ) : m.insufficientEvidence ? (
-                <div className="bg-white border border-line border-l-[3px] border-l-steel px-5 py-4 text-[15px] leading-relaxed max-w-[62ch]">
-                  {m.content}
-                </div>
+                <>
+                  <div className="bg-white border border-line border-l-[3px] border-l-steel px-5 py-4 text-[15px] leading-relaxed max-w-[62ch]">
+                    {m.content}
+                  </div>
+                  <FeedbackButtons
+                    messageId={m.messageId}
+                    feedback={m.feedback}
+                    onFeedback={(rating) => handleFeedback(i, rating)}
+                  />
+                </>
               ) : (
                 <>
                   <AnswerWithCitations text={m.content} citations={m.citations ?? []} />
@@ -118,6 +145,11 @@ export default function Home() {
                       ))}
                     </div>
                   )}
+                  <FeedbackButtons
+                    messageId={m.messageId}
+                    feedback={m.feedback}
+                    onFeedback={(rating) => handleFeedback(i, rating)}
+                  />
                 </>
               )}
             </div>
@@ -151,6 +183,47 @@ export default function Home() {
           </button>
         </form>
       </div>
+    </div>
+  );
+}
+
+function FeedbackButtons({
+  messageId,
+  feedback,
+  onFeedback,
+}: {
+  messageId?: string;
+  feedback?: "helpful" | "not_helpful" | null;
+  onFeedback: (rating: "helpful" | "not_helpful") => void;
+}) {
+  if (!messageId) return null;
+
+  return (
+    <div className="mt-4 flex items-center gap-2">
+      <button
+        type="button"
+        aria-label="Mark helpful"
+        onClick={() => onFeedback("helpful")}
+        className={`text-xs px-2 py-1 rounded border ${
+          feedback === "helpful"
+            ? "border-steel text-steel bg-steel/10"
+            : "border-line text-meta hover:text-ink"
+        }`}
+      >
+        Helpful
+      </button>
+      <button
+        type="button"
+        aria-label="Mark not helpful"
+        onClick={() => onFeedback("not_helpful")}
+        className={`text-xs px-2 py-1 rounded border ${
+          feedback === "not_helpful"
+            ? "border-clay text-clay bg-clay/10"
+            : "border-line text-meta hover:text-ink"
+        }`}
+      >
+        Not helpful
+      </button>
     </div>
   );
 }

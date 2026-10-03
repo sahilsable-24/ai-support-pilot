@@ -44,7 +44,6 @@ export default function DocumentsPage() {
       }
       const doc: Document = await res.json();
 
-      // trigger processing immediately after upload
       await fetch(`${API}/documents/${doc.id}/process`, { method: "POST" });
 
       await fetchDocuments();
@@ -56,8 +55,20 @@ export default function DocumentsPage() {
     }
   }
 
+  async function handleDelete(id: string) {
+    const confirmed = confirm("Delete this document? This cannot be undone.");
+    if (!confirmed) return;
+
+    const res = await fetch(`${API}/documents/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      await fetchDocuments();
+    } else {
+      setError("Failed to delete document.");
+    }
+  }
+
   return (
-    <div className="min-h-screen flex flex-col max-w-[1280px] mx-auto">
+    <div className="min-h-screen flex flex-col max-w-7xl mx-auto">
       <header className="flex items-center justify-between px-10 py-5 border-b border-line">
         <div className="font-serif-display font-semibold text-[22px] tracking-tight">
           SupportPilot
@@ -69,14 +80,11 @@ export default function DocumentsPage() {
           <a href="/documents" className="text-ink border-b-2 border-steel pb-0.5">
             Documents
           </a>
-          <a href="#" className="text-meta">
-            Feedback
-          </a>
         </nav>
       </header>
 
       <main className="flex-1 px-10 py-12 flex justify-center">
-        <div className="w-full max-w-[680px] flex flex-col gap-8">
+        <div className="w-full max-w-170 flex flex-col gap-8">
           <div>
             <h1 className="font-serif-display text-2xl font-semibold mb-1">
               Knowledge base
@@ -116,7 +124,17 @@ export default function DocumentsPage() {
                 className="flex items-center justify-between border-b border-line py-3 text-sm"
               >
                 <span>{doc.title}</span>
-                <StatusBadge status={doc.status} />
+                <div className="flex items-center gap-3">
+                  <StatusBadge status={doc.status} />
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(doc.id)}
+                    aria-label={`Delete ${doc.title}`}
+                    className="text-meta hover:text-clay text-xs"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             ))}
           </div>

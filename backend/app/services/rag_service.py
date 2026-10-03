@@ -38,10 +38,11 @@ def answer_question(db: Session, question: str, conversation_id: uuid.UUID | Non
     retrieval_done = time.perf_counter()
 
     if not has_sufficient_evidence(scored_chunks, settings.evidence_threshold):
-        add_message(db,conversation_id,"assistant", NO_EVIDENCE_MESSAGE)
+        assistant_message = add_message(db,conversation_id,"assistant", NO_EVIDENCE_MESSAGE)
         return {
             "answer": NO_EVIDENCE_MESSAGE,
             "conversation_id": conversation_id,
+            "message_id": assistant_message.id,
             "chunks": [],
             "citations": [],
             "invalid_citation_ids": [],
@@ -69,11 +70,12 @@ def answer_question(db: Session, question: str, conversation_id: uuid.UUID | Non
     if invalid_ids:
         logger.warning(f"Model cited ids that were not in the context: {invalid_ids}")
 
-    add_message(db,conversation_id,"assistant",answer,citations=citations or None)
+    assistant_message = add_message(db,conversation_id,"assistant",answer,citations=citations or None)
 
     return {
         "answer": answer,
         "conversation_id": conversation_id,
+        "message_id": assistant_message.id,
         "chunks": chunks,
         "citations": citations,
         "invalid_citation_ids": invalid_ids,
