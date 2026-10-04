@@ -16,7 +16,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000","http://192.168.1.8:3000"],
+    allow_origins=["http://localhost:3000","http://192.168.1.8:3000","https://ai-support-pilot.vercel.app"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
