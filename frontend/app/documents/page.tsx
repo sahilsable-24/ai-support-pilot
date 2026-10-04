@@ -69,11 +69,11 @@ export default function DocumentsPage() {
 
   return (
     <div className="min-h-screen flex flex-col max-w-7xl mx-auto">
-      <header className="flex items-center justify-between px-10 py-5 border-b border-line">
-        <div className="font-serif-display font-semibold text-[22px] tracking-tight">
+      <header className="flex items-center justify-between px-4 sm:px-6 md:px-10 py-4 md:py-5 border-b border-line">
+        <div className="font-serif-display font-semibold text-lg md:text-[22px] tracking-tight">
           SupportPilot
         </div>
-        <nav className="flex gap-7 text-sm">
+        <nav className="flex gap-4 sm:gap-7 text-sm">
           <a href="/" className="text-meta">
             Chat
           </a>
@@ -83,18 +83,21 @@ export default function DocumentsPage() {
         </nav>
       </header>
 
-      <main className="flex-1 px-10 py-12 flex justify-center">
-        <div className="w-full max-w-170 flex flex-col gap-8">
+      <main className="flex-1 px-4 sm:px-6 md:px-10 py-8 md:py-12 flex justify-center">
+        <div className="w-full max-w-170 flex flex-col gap-6 md:gap-8">
           <div>
-            <h1 className="font-serif-display text-2xl font-semibold mb-1">
+            <h1 className="font-serif-display text-xl md:text-2xl font-semibold mb-1">
               Knowledge base
             </h1>
-            <p className="text-sm text-meta">
-              Upload PDF, Markdown, or text files for SupportPilot to reference.
+            <p className="text-sm text-meta leading-relaxed max-w-[56ch]">
+              Documents uploaded here are what SupportPilot searches to answer questions in
+              chat. Only content from a document marked{" "}
+              <span className="text-steel">ready</span> is used, documents still processing
+              or that failed aren&apos;t included in answers.
             </p>
           </div>
 
-          <label className="border border-line bg-white rounded-md px-6 py-10 flex flex-col items-center justify-center text-center cursor-pointer hover:border-steel transition-colors">
+          <label className="border border-line bg-white rounded-md px-4 md:px-6 py-8 md:py-10 flex flex-col items-center justify-center text-center cursor-pointer hover:border-steel transition-colors">
             <span className="text-sm font-medium mb-1">
               {uploading ? "Uploading…" : "Choose a file to upload"}
             </span>
@@ -121,10 +124,10 @@ export default function DocumentsPage() {
             {documents.map((doc) => (
               <div
                 key={doc.id}
-                className="flex items-center justify-between border-b border-line py-3 text-sm"
+                className="flex items-center justify-between gap-3 border-b border-line py-3 text-sm"
               >
-                <span>{doc.title}</span>
-                <div className="flex items-center gap-3">
+                <span className="truncate min-w-0">{doc.title}</span>
+                <div className="flex items-center gap-2 md:gap-3 shrink-0">
                   <StatusBadge status={doc.status} />
                   <button
                     type="button"
@@ -152,7 +155,7 @@ function StatusBadge({ status }: { status: string }) {
     failed: "text-clay bg-clay/10",
   };
   return (
-    <span className={`text-xs px-2 py-1 rounded ${styles[status] || styles.pending}`}>
+    <span className={`text-xs px-2 py-1 rounded whitespace-nowrap ${styles[status] || styles.pending}`}>
       {status}
     </span>
   );

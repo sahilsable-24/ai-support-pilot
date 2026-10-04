@@ -19,6 +19,12 @@ type Message = {
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
+const EXAMPLE_QUESTIONS = [
+  "Can I get a refund?",
+  "How do I unlock a locked customer account?",
+  "What happens if a customer downgrades their plan?",
+];
+
 export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -90,11 +96,11 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col max-w-7xl mx-auto">
-      <header className="flex items-center justify-between px-10 py-5 border-b border-line">
-        <div className="font-serif-display font-semibold text-[22px] tracking-tight">
+      <header className="flex items-center justify-between px-4 sm:px-6 md:px-10 py-4 md:py-5 border-b border-line">
+        <div className="font-serif-display font-semibold text-lg md:text-[22px] tracking-tight">
           SupportPilot
         </div>
-        <nav className="flex gap-7 text-sm">
+        <nav className="flex gap-4 sm:gap-7 text-sm">
           <a href="/" className="text-ink border-b-2 border-steel pb-0.5">
             Chat
           </a>
@@ -104,12 +110,64 @@ export default function Home() {
         </nav>
       </header>
 
-      <main className="flex-1 px-10 py-12 flex justify-center overflow-y-auto">
-        <div className="w-full max-w-170 flex flex-col gap-8">
+      <main className="flex-1 px-4 sm:px-6 md:px-10 py-8 md:py-12 flex justify-center overflow-y-auto">
+        <div className="w-full max-w-170 flex flex-col gap-6 md:gap-8">
           {messages.length === 0 && (
-            <p className="text-sm text-meta">
-              Ask a question about your support knowledge base.
-            </p>
+            <div className="flex flex-col gap-6">
+              <div>
+                <h1 className="font-serif-display text-xl md:text-2xl font-semibold mb-2">
+                  Ask SupportPilot
+                </h1>
+                <p className="text-sm text-meta leading-relaxed max-w-[56ch]">
+                  SupportPilot answers questions using the documents in your knowledge base.
+                  Every answer is grounded in a specific source, shown as a citation below the
+                  response. If the knowledge base doesn&apos;t contain the answer, SupportPilot
+                  will say so rather than guess.
+                </p>
+              </div>
+
+              <div>
+                <p className="text-xs text-meta mb-2 uppercase tracking-wide">
+                  Try asking
+                </p>
+                <div className="flex flex-col gap-2">
+                  {EXAMPLE_QUESTIONS.map((q) => (
+                    <button
+                      key={q}
+                      type="button"
+                      onClick={() => setInput(q)}
+                      className="text-left text-sm border border-line bg-white rounded-md px-4 py-2.5 hover:border-steel transition-colors"
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <details className="text-sm">
+                <summary className="text-meta cursor-pointer hover:text-ink">
+                  How does this work?
+                </summary>
+                <div className="mt-3 flex flex-col gap-2 text-meta leading-relaxed max-w-[56ch]">
+                  <p>
+                    Questions are matched against document content using a combination of
+                    keyword and semantic search, then re-ranked for relevance before an answer
+                    is generated.
+                  </p>
+                  <p>
+                    Citations link each claim back to the specific document and page it came
+                    from, so you can verify an answer before relaying it to a customer.
+                  </p>
+                  <p>
+                    No documents yet?{" "}
+                    <a href="/documents" className="text-steel underline">
+                      Upload some
+                    </a>{" "}
+                    to get started.
+                  </p>
+                </div>
+              </details>
+            </div>
           )}
 
           {messages.map((m, i) => (
@@ -119,10 +177,10 @@ export default function Home() {
               </div>
 
               {m.role === "user" ? (
-                <div className="text-[17px] leading-relaxed">{m.content}</div>
+                <div className="text-base md:text-[17px] leading-relaxed">{m.content}</div>
               ) : m.insufficientEvidence ? (
                 <>
-                  <div className="bg-white border border-line border-l-[3px] border-l-steel px-5 py-4 text-[15px] leading-relaxed max-w-[62ch]">
+                  <div className="bg-white border border-line border-l-[3px] border-l-steel px-4 md:px-5 py-4 text-sm md:text-[15px] leading-relaxed max-w-[62ch]">
                     {m.content}
                   </div>
                   <FeedbackButtons
@@ -137,10 +195,13 @@ export default function Home() {
                   {m.citations && m.citations.length > 0 && (
                     <div className="mt-4 flex flex-col gap-2">
                       {m.citations.map((c) => (
-                        <div key={c.id} className="flex items-baseline gap-2.5 text-[13px]">
+                        <div
+                          key={c.id}
+                          className="flex items-baseline gap-2.5 text-xs md:text-[13px]"
+                        >
                           <span className="text-clay font-semibold min-w-3.5">{c.id}</span>
-                          <span>{c.document_title}</span>
-                          <span className="text-meta">page {c.page}</span>
+                          <span className="wrap-break-word">{c.document_title}</span>
+                          <span className="text-meta whitespace-nowrap">page {c.page}</span>
                         </div>
                       ))}
                     </div>
@@ -160,8 +221,11 @@ export default function Home() {
         </div>
       </main>
 
-      <div className="border-t border-line px-10 py-6 flex justify-center">
-        <form onSubmit={handleSubmit} className="w-full max-w-170 flex gap-2.5">
+      <div className="border-t border-line px-4 sm:px-6 md:px-10 py-4 md:py-6 flex justify-center">
+        <form
+          onSubmit={handleSubmit}
+          className="w-full max-w-170 flex gap-2 md:gap-2.5"
+        >
           <label htmlFor="q" className="sr-only">
             Ask a question
           </label>
@@ -172,12 +236,12 @@ export default function Home() {
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask a question…"
             disabled={loading}
-            className="flex-1 border border-line bg-white rounded-md px-4 py-3 text-[15px] outline-none focus:border-steel"
+            className="flex-1 min-w-0 border border-line bg-white rounded-md px-3 md:px-4 py-2.5 md:py-3 text-sm md:text-[15px] outline-none focus:border-steel"
           />
           <button
             type="submit"
             disabled={loading}
-            className="bg-ink text-canvas rounded-md px-5 text-sm font-medium disabled:opacity-50"
+            className="bg-ink text-canvas rounded-md px-4 md:px-5 text-sm font-medium disabled:opacity-50 whitespace-nowrap"
           >
             Ask
           </button>
@@ -199,7 +263,7 @@ function FeedbackButtons({
   if (!messageId) return null;
 
   return (
-    <div className="mt-4 flex items-center gap-2">
+    <div className="mt-4 flex flex-wrap items-center gap-2">
       <button
         type="button"
         aria-label="Mark helpful"
@@ -231,7 +295,7 @@ function FeedbackButtons({
 function AnswerWithCitations({ text, citations }: { text: string; citations: Citation[] }) {
   const parts = text.split(/(\[\d+(?:,\s*\d+)*\])/g);
   return (
-    <div className="text-[17px] leading-relaxed max-w-[62ch]">
+    <div className="text-base md:text-[17px] leading-relaxed max-w-[62ch]">
       {parts.map((part, i) => {
         const match = part.match(/^\[(\d+(?:,\s*\d+)*)\]$/);
         if (!match) return <span key={i}>{part}</span>;
