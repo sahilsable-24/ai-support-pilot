@@ -29,9 +29,9 @@ def process_document_route(
     try:
         return process_document(db,document_id)
     except DocumentNotFoundError as e:
-        return HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e))
     except InvalidDocumentError as e:
-        return HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e))
 
 
 @router.get("", response_model=list[DocumentResponse])

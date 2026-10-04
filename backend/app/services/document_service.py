@@ -6,7 +6,7 @@ from app.db.models import Document, DocumentChunk
 import logging
 from app.ingestion.loaders import load_markdown,load_txt, load_pdf
 from app.ingestion.chunking import chunk_text
-from app.embeddings.embedder import embed_text, get_model
+from app.embeddings.embedder import embed_texts
 
 
 logger = logging.getLogger(__name__)
@@ -87,8 +87,7 @@ def process_document(db: Session, document_id: uuid.UUID) -> Document:
             raise ValueError(f"No content could be extracted from {document.title}")
 
         contents_list = [chunk["content"] for chunk in chunks]
-        model = get_model()
-        vectors = model.encode(contents_list).tolist()
+        vectors = embed_texts(contents_list, task_type="RETRIEVAL_DOCUMENT")
 
         db.query(DocumentChunk).filter(DocumentChunk.document_id == document_id).delete()
 

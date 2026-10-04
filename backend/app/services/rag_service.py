@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.db.models import Document
 from app.generation.prompts import SYSTEM_PROMPT,build_context,build_user_prompt
 from app.generation.llm_client import generate
-from app.retrieval.hybrid_search import hybrid_then_rerank, hybrid_then_rerank_with_scores
+from app.retrieval.hybrid_search import hybrid_search_with_scores, hybrid_then_rerank_with_scores
 import logging
 from app.generation.citations import build_citations
 from app.core.config import settings
@@ -34,10 +34,17 @@ def answer_question(db: Session, question: str, conversation_id: uuid.UUID | Non
     add_message(db,conversation_id,"user",question)
 
     start = time.perf_counter()
-    scored_chunks = hybrid_then_rerank_with_scores(db, retrieval_query, top_k=top_k)
+
+    if settings.rerank_enabled:
+        scored_chunks = hybrid_then_rerank_with_scores(db, retrieval_query, top_k=top_k)
+        threshold = settings.evidence_threshold
+    else:
+        scored_chunks = hybrid_search_with_scores(db, retrieval_query, top_k=top_k)
+        threshold = settings.hybrid_evidence_threshold
+    
     retrieval_done = time.perf_counter()
 
-    if not has_sufficient_evidence(scored_chunks, settings.evidence_threshold):
+    if not has_sufficient_evidence(scored_chunks, threshold):
         assistant_message = add_message(db,conversation_id,"assistant", NO_EVIDENCE_MESSAGE)
         return {
             "answer": NO_EVIDENCE_MESSAGE,

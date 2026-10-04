@@ -85,3 +85,43 @@ def hybrid_then_rerank_with_scores(
     )
 
     return rerank_with_scores(query, candidates, top_k=top_k)
+
+
+def hybrid_search_with_scores(
+    db: Session,
+    query: str,
+    top_k: int = 5,
+    alpha: float = 0.7,
+    candidate_pool_size: int = 20,
+) -> list[tuple[DocumentChunk, float]]:
+    vector_results = search_with_scores(db, query, top_k=candidate_pool_size)
+    bm25_results = bm25_search_with_scores(db, query, top_k=candidate_pool_size)
+
+    vector_scores_raw = [score for _, score in vector_results]
+    bm25_scores_raw = [score for _, score in bm25_results]
+
+    vector_scores_norm = normalize_scores(vector_scores_raw)
+    bm25_scores_norm = normalize_scores(bm25_scores_raw)
+
+    vector_score_map = {
+        chunk.id: norm_score
+        for (chunk, _), norm_score in zip(vector_results, vector_scores_norm)
+    }
+    bm25_score_map = {
+        chunk.id: norm_score
+        for (chunk, _), norm_score in zip(bm25_results, bm25_scores_norm)
+    }
+
+    all_chunks = {chunk.id: chunk for chunk, _ in vector_results}
+    all_chunks.update({chunk.id: chunk for chunk, _ in bm25_results})
+
+    combined_scores = []
+    for chunk_id, chunk in all_chunks.items():
+        v_score = vector_score_map.get(chunk_id, 0.0)
+        b_score = bm25_score_map.get(chunk_id, 0.0)
+        combined = alpha * v_score + (1 - alpha) * b_score
+        combined_scores.append((chunk, combined))
+
+    combined_scores.sort(key=lambda pair: pair[1], reverse=True)
+
+    return combined_scores[:top_k]

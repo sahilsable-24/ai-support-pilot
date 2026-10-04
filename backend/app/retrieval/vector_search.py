@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 import numpy as np
 from app.db.models import DocumentChunk
 from sqlalchemy import select
-from app.embeddings.embedder import get_model
+from app.embeddings.embedder import embed_text
 
 
 def build_index(db: Session) -> tuple["faiss.Index", list[uuid.UUID]]:
@@ -32,11 +32,12 @@ def build_index(db: Session) -> tuple["faiss.Index", list[uuid.UUID]]:
 
 
 def search(db: Session, query: str, top_k: int = 5) -> list[DocumentChunk]:
+    import faiss
+
     index, chunk_ids = build_index(db)
 
-    model = get_model()
-    query_vector = model.encode([query], normalize_embeddings=True)
-    query_vector = np.array(query_vector, dtype="float32")
+    query_vector = np.array([embed_text(query)], dtype="float32")
+    faiss.normalize_L2(query_vector)
 
     scores, indices = index.search(query_vector, top_k)
 
@@ -52,11 +53,12 @@ def search(db: Session, query: str, top_k: int = 5) -> list[DocumentChunk]:
 
 
 def search_with_scores(db: Session, query: str, top_k: int = 20) -> list[tuple[DocumentChunk, float]]:
+    import faiss
+
     index, chunk_ids = build_index(db)
 
-    model = get_model()
-    query_vector = model.encode([query], normalize_embeddings=True)
-    query_vector = np.array(query_vector, dtype="float32")
+    query_vector = np.array([embed_text(query)], dtype="float32")
+    faiss.normalize_L2(query_vector)
 
     scores, indices = index.search(query_vector, top_k)
 
