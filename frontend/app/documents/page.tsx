@@ -70,9 +70,12 @@ export default function DocumentsPage() {
   return (
     <div className="min-h-screen flex flex-col max-w-7xl mx-auto">
       <header className="flex items-center justify-between px-4 sm:px-6 md:px-10 py-4 md:py-5 border-b border-line">
-        <div className="font-serif-display font-semibold text-lg md:text-[22px] tracking-tight">
+        <a
+          href="/"
+          className="font-serif-display font-semibold text-lg md:text-[22px] tracking-tight"
+        >
           SupportPilot
-        </div>
+        </a>
         <nav className="flex gap-4 sm:gap-7 text-sm">
           <a href="/" className="text-meta">
             Chat

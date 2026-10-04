@@ -12,6 +12,8 @@ from app.generation.evidence import has_sufficient_evidence
 import uuid
 from app.services.conversation_service import create_conversation,add_message, get_messages
 from app.generation.query_rewriting import rewrite_query
+import json as json_lib
+from app.generation.llm_client import generate, generate_stream, LLMError
 logger = logging.getLogger(__name__)
 
 NO_EVIDENCE_MESSAGE = (
@@ -92,3 +94,71 @@ def answer_question(db: Session, question: str, conversation_id: uuid.UUID | Non
             "generation": generation_done - generation_start,
         },
     }
+
+
+
+def answer_question_stream(db: Session, question: str, conversation_id: uuid.UUID | None = None, top_k: int = 5):
+    if conversation_id is None:
+        conversation = create_conversation(db)
+        conversation_id = conversation.id
+        history = []
+    else:
+        history = get_messages(db, conversation_id)
+
+    retrieval_query = rewrite_query(history, question) if history else question
+
+    add_message(db, conversation_id, "user", question)
+
+    start = time.perf_counter()
+    if settings.rerank_enabled:
+        scored_chunks = hybrid_then_rerank_with_scores(db, retrieval_query, top_k=top_k)
+        threshold = settings.evidence_threshold
+    else:
+        scored_chunks = hybrid_search_with_scores(db, retrieval_query, top_k=top_k)
+        threshold = settings.hybrid_evidence_threshold
+
+    if not has_sufficient_evidence(scored_chunks, threshold):
+        yield json_lib.dumps({"type": "start", "insufficient_evidence": True}) + "\n"
+        assistant_message = add_message(db, conversation_id, "assistant", NO_EVIDENCE_MESSAGE)
+        yield json_lib.dumps({"type": "token", "content": NO_EVIDENCE_MESSAGE}) + "\n"
+        yield json_lib.dumps({
+            "type": "done",
+            "conversation_id": str(conversation_id),
+            "message_id": str(assistant_message.id),
+            "citations": [],
+            "insufficient_evidence": True,
+        }) + "\n"
+        return
+
+    yield json_lib.dumps({"type": "start", "insufficient_evidence": False}) + "\n"
+
+    chunks = [chunk for chunk, score in scored_chunks]
+    doc_ids = {chunk.document_id for chunk in chunks}
+    documents = db.scalars(select(Document).where(Document.id.in_(doc_ids))).all()
+    titles = {doc.id: doc.title for doc in documents}
+
+    context = build_context(chunks, titles)
+    prompt = build_user_prompt(retrieval_query, context)
+
+    full_answer = ""
+    try:
+        for token in generate_stream(prompt, system=SYSTEM_PROMPT):
+            full_answer += token
+            yield json_lib.dumps({"type": "token", "content": token}) + "\n"
+    except LLMError as e:
+        yield json_lib.dumps({"type": "error", "message": str(e)}) + "\n"
+        return
+
+    citations, invalid_ids = build_citations(full_answer, chunks, titles)
+    if invalid_ids:
+        logger.warning(f"Model cited ids that were not in the context: {invalid_ids}")
+
+    assistant_message = add_message(db, conversation_id, "assistant", full_answer, citations=citations or None)
+
+    yield json_lib.dumps({
+        "type": "done",
+        "conversation_id": str(conversation_id),
+        "message_id": str(assistant_message.id),
+        "citations": citations,
+        "insufficient_evidence": False,
+    }) + "\n"

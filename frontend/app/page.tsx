@@ -36,44 +36,102 @@ export default function Home() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  function handleReset() {
+    setMessages([]);
+    setConversationId(null);
+    setInput("");
+  }
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const question = input.trim();
     if (!question || loading) return;
 
-    setMessages((prev) => [...prev, { role: "user", content: question }]);
+    setMessages((prev) => [
+      ...prev,
+      { role: "user", content: question },
+      { role: "assistant", content: "", citations: [], feedback: null },
+    ]);
     setInput("");
     setLoading(true);
 
     try {
-      const res = await fetch(`${API}/chat`, {
+      const res = await fetch(`${API}/chat/stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question, conversation_id: conversationId }),
       });
-      const data = await res.json();
 
-      setConversationId(data.conversation_id);
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: data.answer,
-          citations: data.citations,
-          insufficientEvidence: data.insufficient_evidence,
-          messageId: data.message_id,
-          feedback: null,
-        },
-      ]);
+      if (!res.body) throw new Error("No response body");
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          const event = JSON.parse(line);
+
+          if (event.type === "start") {
+            setMessages((prev) => {
+              const updated = [...prev];
+              updated[updated.length - 1] = {
+                ...updated[updated.length - 1],
+                insufficientEvidence: event.insufficient_evidence,
+              };
+              return updated;
+            });
+          } else if (event.type === "token") {
+            setMessages((prev) => {
+              const updated = [...prev];
+              const last = updated[updated.length - 1];
+              updated[updated.length - 1] = { ...last, content: last.content + event.content };
+              return updated;
+            });
+          } else if (event.type === "done") {
+            setConversationId(event.conversation_id);
+            setMessages((prev) => {
+              const updated = [...prev];
+              const last = updated[updated.length - 1];
+              updated[updated.length - 1] = {
+                ...last,
+                citations: event.citations,
+                insufficientEvidence: event.insufficient_evidence,
+                messageId: event.message_id,
+              };
+              return updated;
+            });
+          } else if (event.type === "error") {
+            setMessages((prev) => {
+              const updated = [...prev];
+              updated[updated.length - 1] = {
+                role: "assistant",
+                content: event.message || "Something went wrong.",
+                insufficientEvidence: true,
+              };
+              return updated;
+            });
+          }
+        }
+      }
     } catch {
-      setMessages((prev) => [
-        ...prev,
-        {
+      setMessages((prev) => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
           role: "assistant",
           content: "Something went wrong reaching SupportPilot.",
           insufficientEvidence: true,
-        },
-      ]);
+        };
+        return updated;
+      });
     } finally {
       setLoading(false);
     }
@@ -94,12 +152,18 @@ export default function Home() {
     });
   }
 
+  const hasMessages = messages.length > 0;
+
   return (
     <div className="min-h-screen flex flex-col max-w-7xl mx-auto">
       <header className="flex items-center justify-between px-4 sm:px-6 md:px-10 py-4 md:py-5 border-b border-line">
-        <div className="font-serif-display font-semibold text-lg md:text-[22px] tracking-tight">
+        <button
+          type="button"
+          onClick={handleReset}
+          className="font-serif-display font-semibold text-lg md:text-[22px] tracking-tight"
+        >
           SupportPilot
-        </div>
+        </button>
         <nav className="flex gap-4 sm:gap-7 text-sm">
           <a href="/" className="text-ink border-b-2 border-steel pb-0.5">
             Chat
@@ -112,7 +176,7 @@ export default function Home() {
 
       <main className="flex-1 px-4 sm:px-6 md:px-10 py-8 md:py-12 flex justify-center overflow-y-auto">
         <div className="w-full max-w-170 flex flex-col gap-6 md:gap-8">
-          {messages.length === 0 && (
+          {!hasMessages && (
             <div className="flex flex-col gap-6">
               <div>
                 <h1 className="font-serif-display text-xl md:text-2xl font-semibold mb-2">
@@ -125,6 +189,13 @@ export default function Home() {
                   will say so rather than guess.
                 </p>
               </div>
+
+              <ChatInputForm
+                input={input}
+                setInput={setInput}
+                loading={loading}
+                onSubmit={handleSubmit}
+              />
 
               <div>
                 <p className="text-xs text-meta mb-2 uppercase tracking-wide">
@@ -216,38 +287,57 @@ export default function Home() {
             </div>
           ))}
 
-          {loading && <p className="text-sm text-meta">Thinking…</p>}
           <div ref={bottomRef} />
         </div>
       </main>
 
-      <div className="border-t border-line px-4 sm:px-6 md:px-10 py-4 md:py-6 flex justify-center">
-        <form
-          onSubmit={handleSubmit}
-          className="w-full max-w-170 flex gap-2 md:gap-2.5"
-        >
-          <label htmlFor="q" className="sr-only">
-            Ask a question
-          </label>
-          <input
-            id="q"
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask a question…"
-            disabled={loading}
-            className="flex-1 min-w-0 border border-line bg-white rounded-md px-3 md:px-4 py-2.5 md:py-3 text-sm md:text-[15px] outline-none focus:border-steel"
+      {hasMessages && (
+        <div className="border-t border-line px-4 sm:px-6 md:px-10 py-4 md:py-6 flex justify-center">
+          <ChatInputForm
+            input={input}
+            setInput={setInput}
+            loading={loading}
+            onSubmit={handleSubmit}
           />
-          <button
-            type="submit"
-            disabled={loading}
-            className="bg-ink text-canvas rounded-md px-4 md:px-5 text-sm font-medium disabled:opacity-50 whitespace-nowrap"
-          >
-            Ask
-          </button>
-        </form>
-      </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+function ChatInputForm({
+  input,
+  setInput,
+  loading,
+  onSubmit,
+}: {
+  input: string;
+  setInput: (v: string) => void;
+  loading: boolean;
+  onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+}) {
+  return (
+    <form onSubmit={onSubmit} className="w-full flex gap-2 md:gap-2.5">
+      <label htmlFor="q" className="sr-only">
+        Ask a question
+      </label>
+      <input
+        id="q"
+        type="text"
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        placeholder="Ask a question…"
+        disabled={loading}
+        className="flex-1 min-w-0 border border-line bg-white rounded-md px-3 md:px-4 py-2.5 md:py-3 text-sm md:text-[15px] outline-none focus:border-steel"
+      />
+      <button
+        type="submit"
+        disabled={loading}
+        className="bg-ink text-canvas rounded-md px-4 md:px-5 text-sm font-medium disabled:opacity-50 whitespace-nowrap"
+      >
+        Ask
+      </button>
+    </form>
   );
 }
 
